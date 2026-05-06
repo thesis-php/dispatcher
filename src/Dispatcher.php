@@ -34,10 +34,13 @@ final class Dispatcher
 
     public function dispatch(object $hook): void
     {
-        $class = $hook::class;
+        if (!isset($this->handlers[$hook::class])) {
+            return;
+        }
+
         $dispatched = [];
 
-        while ([] !== $handlers = array_diff_key($this->handlers[$class] ?? [], $dispatched)) {
+        while ([] !== $handlers = array_diff_key($this->handlers[$hook::class] ?? [], $dispatched)) {
             foreach ($handlers as $index => $handler) {
                 $handler($hook);
                 $dispatched[$index] = true;
