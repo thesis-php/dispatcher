@@ -40,6 +40,7 @@ final class Dispatcher
 
         $dispatched = [];
 
+        /** @phpstan-ignore nullCoalesce.offset */
         while ([] !== $handlers = array_diff_key($this->handlers[$hook::class] ?? [], $dispatched)) {
             foreach ($handlers as $index => $handler) {
                 $handler($hook);
