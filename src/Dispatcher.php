@@ -16,12 +16,16 @@ final class Dispatcher
 
     /**
      * @template T of object
-     * @param class-string<T> $hookClass
-     * @param callable(T, \Closure(): void): void $handler second argument is an unsubscribe callback
-     * @return \Closure(): void unsubscribe callback
+     * @param class-string<T> $hookClass A final class or enum
+     * @param callable(T, \Closure(): void): void $handler The second argument is an unsubscribe callback
+     * @return \Closure(): void Unsubscribe callback
      */
     public function subscribe(string $hookClass, callable $handler): \Closure
     {
+        if (!new \ReflectionClass($hookClass)->isFinal()) {
+            throw new \ValueError("Hook class must be a final class or enum, got `{$hookClass}`");
+        }
+
         $index = (array_key_last($this->handlers[$hookClass] ?? []) ?? -1) + 1;
 
         $unsubscribe = $this->createUnsubscribeCallback($hookClass, $index);

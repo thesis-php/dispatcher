@@ -15,10 +15,10 @@ composer require thesis/dispatcher
 ```php
 use Thesis\Dispatcher;
 
-final class UserRegistered
+final readonly class UserRegistered
 {
     public function __construct(
-        public readonly string $email,
+        public string $email,
     ) {}
 }
 
@@ -96,6 +96,16 @@ $dispatcher->dispatch(new UserRegistered('user@example.com'));
 // second
 // third
 ```
+
+## Hook classes must be final
+
+All hook classes must be declared `final` (enums are also accepted, as they are implicitly final).
+
+The dispatcher matches hooks by exact class name. If inheritance were allowed, a handler subscribed to a parent class
+would silently not fire for subclass instances — which is confusing. Requiring `final` makes this contract explicit:
+one class, one set of handlers, no surprises.
+
+It also nudges toward treating hooks as simple sealed value objects, which is the right model for them.
 
 ## License
 

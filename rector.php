@@ -1,8 +1,10 @@
 <?php
 
 declare(strict_types=1);
+use Rector\Config\RectorConfig;
+use Rector\Php80\Rector\Class_\StringableForToStringRector;
 
-return Rector\Config\RectorConfig::configure()
+return RectorConfig::configure()
     ->withPaths([
         __DIR__ . '/examples',
         __DIR__ . '/src',
@@ -12,5 +14,5 @@ return Rector\Config\RectorConfig::configure()
     ->withCache(__DIR__ . '/var/rector')
     ->withPhpSets()
     ->withSkip([
-        Rector\Php80\Rector\Class_\StringableForToStringRector::class,
+        StringableForToStringRector::class,
     ]);

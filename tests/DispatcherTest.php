@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Thesis;
 
 use Testo\Assert;
+use Testo\Assert\ExpectException;
+use Testo\Data\DataSet;
 use Testo\Test;
 
 final class DispatcherTest
@@ -15,11 +17,11 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $called = false;
 
-        $dispatcher->subscribe(\stdClass::class, static function () use (&$called): void {
+        $dispatcher->subscribe(HookA::class, static function () use (&$called): void {
             $called = true;
         });
 
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
 
         Assert::true($called);
     }
@@ -30,14 +32,14 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $order = [];
 
-        $dispatcher->subscribe(\stdClass::class, static function () use (&$order): void {
+        $dispatcher->subscribe(HookA::class, static function () use (&$order): void {
             $order[] = 1;
         });
-        $dispatcher->subscribe(\stdClass::class, static function () use (&$order): void {
+        $dispatcher->subscribe(HookA::class, static function () use (&$order): void {
             $order[] = 2;
         });
 
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
 
         Assert::same($order, [1, 2]);
     }
@@ -46,10 +48,10 @@ final class DispatcherTest
     public function passesHookToHandler(): void
     {
         $dispatcher = new Dispatcher();
-        $hook = new \stdClass();
+        $hook = new HookA();
         $received = null;
 
-        $dispatcher->subscribe(\stdClass::class, static function (\stdClass $h) use (&$received): void {
+        $dispatcher->subscribe(HookA::class, static function (HookA $h) use (&$received): void {
             $received = $h;
         });
 
@@ -64,11 +66,11 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $called = false;
 
-        $dispatcher->subscribe(\stdClass::class, static function () use (&$called): void {
+        $dispatcher->subscribe(HookA::class, static function () use (&$called): void {
             $called = true;
         });
 
-        $dispatcher->dispatch(new \ArrayObject());
+        $dispatcher->dispatch(new HookB());
 
         Assert::false($called);
     }
@@ -79,12 +81,12 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $called = false;
 
-        $unsubscribe = $dispatcher->subscribe(\stdClass::class, static function () use (&$called): void {
+        $unsubscribe = $dispatcher->subscribe(HookA::class, static function () use (&$called): void {
             $called = true;
         });
 
         $unsubscribe();
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
 
         Assert::false($called);
     }
@@ -95,13 +97,13 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $callCount = 0;
 
-        $dispatcher->subscribe(\stdClass::class, static function (\stdClass $hook, \Closure $unsubscribe) use (&$callCount): void {
+        $dispatcher->subscribe(HookA::class, static function (HookA $hook, \Closure $unsubscribe) use (&$callCount): void {
             ++$callCount;
             $unsubscribe();
         });
 
-        $dispatcher->dispatch(new \stdClass());
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
+        $dispatcher->dispatch(new HookA());
 
         Assert::same($callCount, 1);
     }
@@ -112,15 +114,15 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $order = [];
 
-        $dispatcher->subscribe(\stdClass::class, static function () use ($dispatcher, &$order): void {
+        $dispatcher->subscribe(HookA::class, static function () use ($dispatcher, &$order): void {
             $order[] = 1;
 
-            $dispatcher->subscribe(\stdClass::class, static function () use (&$order): void {
+            $dispatcher->subscribe(HookA::class, static function () use (&$order): void {
                 $order[] = 2;
             });
         });
 
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
 
         Assert::same($order, [1, 2]);
     }
@@ -131,15 +133,55 @@ final class DispatcherTest
         $dispatcher = new Dispatcher();
         $secondCalled = false;
 
-        $dispatcher->subscribe(\stdClass::class, static function (\stdClass $hook, \Closure $unsubscribe): void {
+        $dispatcher->subscribe(HookA::class, static function (HookA $hook, \Closure $unsubscribe): void {
             $unsubscribe();
         });
-        $dispatcher->subscribe(\stdClass::class, static function () use (&$secondCalled): void {
+        $dispatcher->subscribe(HookA::class, static function () use (&$secondCalled): void {
             $secondCalled = true;
         });
 
-        $dispatcher->dispatch(new \stdClass());
+        $dispatcher->dispatch(new HookA());
 
         Assert::true($secondCalled);
     }
+
+    #[Test]
+    public function worksWithEnum(): void
+    {
+        $dispatcher = new Dispatcher();
+        $received = null;
+
+        $dispatcher->subscribe(HookEnum::class, static function (HookEnum $hook) use (&$received): void {
+            $received = $hook;
+        });
+
+        $dispatcher->dispatch(HookEnum::A);
+
+        Assert::same($received, HookEnum::A);
+    }
+
+    /**
+     * @param class-string $hookClass
+     */
+    #[Test]
+    #[ExpectException(\ValueError::class)]
+    #[DataSet([\stdClass::class], 'non-final class')]
+    #[DataSet([\ReflectionType::class], 'abstract class')]
+    #[DataSet([\Iterator::class], 'interface')]
+    #[DataSet([HookTrait::class], 'trait')]
+    public function throwsOnNonFinalHookClass(string $hookClass): void
+    {
+        new Dispatcher()->subscribe($hookClass, static function (): void {});
+    }
+}
+
+final class HookA {}
+final class HookB {}
+
+/** @phpstan-ignore trait.unused */
+trait HookTrait {}
+
+enum HookEnum
+{
+    case A;
 }
