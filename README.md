@@ -107,6 +107,18 @@ one class, one set of handlers, no surprises.
 
 It also nudges toward treating hooks as simple sealed value objects, which is the right model for them.
 
+## PSR-14
+
+This library deliberately does not implement [psr/event-dispatcher](https://packagist.org/packages/psr/event-dispatcher). A few reasons:
+
+- The PSR calls them *events*; we prefer *hooks* — a subtly different mental model that better reflects push-based
+  notifications rather than something that "happened" in the domain.
+- `StoppableEventInterface` conflates stopping propagation with the event itself, which we consider a design smell.
+  Stopping propagation is a dispatcher concern, not a data concern.
+- PSR-14 adoption in the ecosystem is limited, so the interoperability argument is weak in practice.
+
+If you do need PSR-14 compatibility, writing a thin adapter is straightforward.
+
 ## License
 
 [MIT](LICENSE)
